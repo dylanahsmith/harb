@@ -1,3 +1,5 @@
+#include "progress.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -118,7 +120,6 @@ typedef sparse_hash_map<uint64_t, struct ruby_heap_obj *> ruby_heap_map_t;
 static const size_t kRubyObjectSize = 40;
 
 bool exit_ = false;
-bool show_progress;
 string_set_t intern_strings_;
 ruby_heap_map_t heap_map_;
 ruby_heap_obj_list_t root_objects;
@@ -326,50 +327,6 @@ add_inverse_obj_references(ruby_heap_obj_t *obj) {
     }
   }
 }
-
-class Progress {
-  uint64_t current, total;
-  int percentage;
-  const char *message;
-
-  public:
-
-  Progress(const char *message, uint64_t total) : current(0), total(total),
-                                                  percentage(-1), message(message) {}
-
-  void start() {
-    update(0);
-  }
-
-  void complete() {
-    update(total);
-    if (show_progress)
-      printf("\n");
-  }
-
-  void print() {
-    if (show_progress)
-      printf("\r%s (%d%%)", message, percentage);
-  }
-
-  void clear() {
-    if (show_progress)
-      printf("\r%*s\r", (int)strlen(message) + 7, "");
-  }
-
-  void increment(uint64_t amount=1) {
-    update(current + amount);
-  }
-
-  void update(uint64_t progress) {
-    this->current = progress;
-    uint64_t new_percentage = (progress * 100) / total;
-    if (percentage != new_percentage) {
-      this->percentage = new_percentage;
-      print();
-    }
-  }
-};
 
 static void
 build_back_references() {
@@ -776,8 +733,6 @@ static void execute_command(char *line) {
 int
 main(int argc, char **argv) {
   char *line;
-
-  show_progress = isatty(STDOUT_FILENO) == 1;
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
